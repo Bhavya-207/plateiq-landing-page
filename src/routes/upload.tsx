@@ -253,12 +253,12 @@ function UploadPage() {
         <div className="mt-10 flex flex-col items-center">
           <button
             type="button"
-            disabled={!preview}
-            onClick={() => navigate({ to: "/results" })}
+            disabled={!preview || submitting}
+            onClick={onAnalyze}
             className="group inline-flex w-full max-w-md items-center justify-center gap-2 rounded-full bg-primary px-8 py-5 text-base font-medium text-primary-foreground shadow-glow transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
           >
             <Sparkles className="h-4 w-4 transition-transform group-hover:rotate-12" />
-            Analyze Meal
+            {submitting ? "Preparing…" : "Analyze Meal"}
           </button>
           <p className="mt-3 text-xs text-muted-foreground">
             {preview
