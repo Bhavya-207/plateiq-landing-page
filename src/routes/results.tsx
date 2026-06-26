@@ -6,7 +6,7 @@ import {
   Flame,
   Dumbbell,
   Wheat,
-  Avocado as AvocadoIcon,
+  Droplet,
   Sprout,
   CheckCircle2,
   Sparkles,
@@ -41,14 +41,9 @@ const nutrition = [
   { key: "Calories", value: "512", unit: "kcal", emoji: "🔥", Icon: Flame, tone: "primary" as const },
   { key: "Protein", value: "28", unit: "g", emoji: "💪", Icon: Dumbbell, tone: "accent" as const },
   { key: "Carbs", value: "52", unit: "g", emoji: "🥖", Icon: Wheat, tone: "primary" as const },
-  { key: "Fat", value: "16", unit: "g", emoji: "🥑", Icon: AvocadoFallback, tone: "accent" as const },
+  { key: "Fat", value: "16", unit: "g", emoji: "🥑", Icon: Droplet, tone: "accent" as const },
   { key: "Fiber", value: "8", unit: "g", emoji: "🌾", Icon: Sprout, tone: "primary" as const },
 ];
-
-// lucide doesn't ship an Avocado icon; tiny fallback wrapper to keep typing clean
-function AvocadoFallback(props: { className?: string }) {
-  return <Sparkles {...props} />;
-}
 
 function ResultsPage() {
   const [loading, setLoading] = useState(true);
