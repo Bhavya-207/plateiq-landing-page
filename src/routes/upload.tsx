@@ -38,31 +38,57 @@ function UploadPage() {
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const [fileSize, setFileSize] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleFile = (file: File | undefined | null) => {
-    setError(null);
+  const readAsDataUrl = (f: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(new Error("Could not read image file."));
+      r.readAsDataURL(f);
+    });
+
+  const onAnalyze = async () => {
     if (!file) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const dataUrl = await readAsDataUrl(file);
+      sessionStorage.setItem("plateiq:image", dataUrl);
+      sessionStorage.removeItem("plateiq:result");
+      navigate({ to: "/results" });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to prepare image.");
+      setSubmitting(false);
+    }
+  };
+
+  const handleFile = (f: File | undefined | null) => {
+    setError(null);
+    if (!f) return;
     const isAllowed =
-      ALLOWED.includes(file.type) || /\.(jpe?g|png)$/i.test(file.name);
+      ALLOWED.includes(f.type) || /\.(jpe?g|png)$/i.test(f.name);
     if (!isAllowed) {
       setError("Unsupported format. Please upload a JPG, JPEG or PNG.");
       return;
     }
-    if (file.size > MAX_BYTES) {
+    if (f.size > MAX_BYTES) {
       setError("That image is over 10 MB. Try a smaller photo.");
       return;
     }
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(f);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return url;
     });
-    setFileName(file.name);
-    setFileSize(file.size);
+    setFile(f);
+    setFileName(f.name);
+    setFileSize(f.size);
   };
 
   const onInput = (e: ChangeEvent<HTMLInputElement>) =>
@@ -77,6 +103,7 @@ function UploadPage() {
   const clearPreview = () => {
     if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
+    setFile(null);
     setFileName("");
     setFileSize(0);
     if (galleryRef.current) galleryRef.current.value = "";
@@ -226,12 +253,12 @@ function UploadPage() {
         <div className="mt-10 flex flex-col items-center">
           <button
             type="button"
-            disabled={!preview}
-            onClick={() => navigate({ to: "/results" })}
+            disabled={!preview || submitting}
+            onClick={onAnalyze}
             className="group inline-flex w-full max-w-md items-center justify-center gap-2 rounded-full bg-primary px-8 py-5 text-base font-medium text-primary-foreground shadow-glow transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
           >
             <Sparkles className="h-4 w-4 transition-transform group-hover:rotate-12" />
-            Analyze Meal
+            {submitting ? "Preparing…" : "Analyze Meal"}
           </button>
           <p className="mt-3 text-xs text-muted-foreground">
             {preview
