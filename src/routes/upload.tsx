@@ -38,10 +38,35 @@ function UploadPage() {
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const [fileSize, setFileSize] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const readAsDataUrl = (f: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(new Error("Could not read image file."));
+      r.readAsDataURL(f);
+    });
+
+  const onAnalyze = async () => {
+    if (!file) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const dataUrl = await readAsDataUrl(file);
+      sessionStorage.setItem("plateiq:image", dataUrl);
+      sessionStorage.removeItem("plateiq:result");
+      navigate({ to: "/results" });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to prepare image.");
+      setSubmitting(false);
+    }
+  };
 
   const handleFile = (file: File | undefined | null) => {
     setError(null);
