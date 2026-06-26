@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Camera,
   Sparkles,
@@ -151,13 +151,13 @@ function Landing() {
             </p>
 
             <div id="upload" className="mt-10 flex flex-wrap items-center gap-4">
-              <button
-                type="button"
+              <Link
+                to="/upload"
                 className="group inline-flex items-center gap-2 rounded-full bg-primary px-7 py-4 text-base font-medium text-primary-foreground shadow-glow transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-18px_color-mix(in_oklab,var(--leaf)_55%,transparent)] active:scale-[0.98]"
               >
                 <Upload className="h-4 w-4 transition-transform group-hover:-translate-y-0.5" />
                 Analyze My Meal
-              </button>
+              </Link>
               <a
                 href="#how"
                 className="inline-flex items-center gap-2 rounded-full px-5 py-4 text-sm font-medium text-foreground/80 transition hover:text-foreground"
