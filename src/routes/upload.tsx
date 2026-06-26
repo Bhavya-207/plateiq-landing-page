@@ -68,26 +68,27 @@ function UploadPage() {
     }
   };
 
-  const handleFile = (file: File | undefined | null) => {
+  const handleFile = (f: File | undefined | null) => {
     setError(null);
-    if (!file) return;
+    if (!f) return;
     const isAllowed =
-      ALLOWED.includes(file.type) || /\.(jpe?g|png)$/i.test(file.name);
+      ALLOWED.includes(f.type) || /\.(jpe?g|png)$/i.test(f.name);
     if (!isAllowed) {
       setError("Unsupported format. Please upload a JPG, JPEG or PNG.");
       return;
     }
-    if (file.size > MAX_BYTES) {
+    if (f.size > MAX_BYTES) {
       setError("That image is over 10 MB. Try a smaller photo.");
       return;
     }
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(f);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return url;
     });
-    setFileName(file.name);
-    setFileSize(file.size);
+    setFile(f);
+    setFileName(f.name);
+    setFileSize(f.size);
   };
 
   const onInput = (e: ChangeEvent<HTMLInputElement>) =>
@@ -102,6 +103,7 @@ function UploadPage() {
   const clearPreview = () => {
     if (preview) URL.revokeObjectURL(preview);
     setPreview(null);
+    setFile(null);
     setFileName("");
     setFileSize(0);
     if (galleryRef.current) galleryRef.current.value = "";
