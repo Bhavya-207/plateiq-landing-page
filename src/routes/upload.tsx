@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import {
   ArrowLeft,
   Camera,
@@ -36,7 +36,8 @@ const ALLOWED = ["image/jpeg", "image/jpg", "image/png"];
 function UploadPage() {
   const navigate = useNavigate();
   const galleryRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>("");
@@ -44,6 +45,8 @@ function UploadPage() {
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const readAsDataUrl = (f: File) =>
     new Promise<string>((resolve, reject) => {
@@ -107,8 +110,78 @@ function UploadPage() {
     setFileName("");
     setFileSize(0);
     if (galleryRef.current) galleryRef.current.value = "";
-    if (cameraRef.current) cameraRef.current.value = "";
   };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setCameraOpen(false);
+  };
+
+  // IMPORTANT: invoked synchronously from user click — no awaits before getUserMedia
+  const openCamera = () => {
+    setCameraError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Camera is not supported in this browser.");
+      return;
+    }
+    setCameraOpen(true);
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      })
+      .then((stream) => {
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      })
+      .catch((err: unknown) => {
+        const name = err instanceof Error ? err.name : "";
+        let msg = "Could not access your camera.";
+        if (name === "NotAllowedError" || name === "SecurityError")
+          msg = "Camera permission was denied. Please allow camera access and try again.";
+        else if (name === "NotFoundError" || name === "OverconstrainedError")
+          msg = "No camera was found on this device.";
+        else if (name === "NotReadableError")
+          msg = "Your camera is being used by another app.";
+        setCameraError(msg);
+      });
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const f = new File([blob], `plateiq-${Date.now()}.jpg`, { type: "image/jpeg" });
+        handleFile(f);
+        stopCamera();
+      },
+      "image/jpeg",
+      0.92,
+    );
+  };
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
 
   const prettySize = (b: number) =>
     b < 1024 * 1024 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1024 / 1024).toFixed(2)} MB`;
@@ -206,7 +279,7 @@ function UploadPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => cameraRef.current?.click()}
+                  onClick={openCamera}
                   className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-3 text-sm font-medium shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:bg-secondary"
                 >
                   <Camera className="h-4 w-4 text-accent" />
@@ -220,14 +293,6 @@ function UploadPage() {
             ref={galleryRef}
             type="file"
             accept="image/jpeg,image/jpg,image/png"
-            className="hidden"
-            onChange={onInput}
-          />
-          <input
-            ref={cameraRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
             className="hidden"
             onChange={onInput}
           />
@@ -267,6 +332,63 @@ function UploadPage() {
           </p>
         </div>
       </main>
+
+      {/* Camera modal */}
+      {cameraOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-border bg-card shadow-soft">
+            <div className="flex items-center justify-between border-b border-border px-5 py-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Camera className="h-4 w-4 text-accent" />
+                Take a photo
+              </div>
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="grid h-8 w-8 place-items-center rounded-full bg-secondary text-foreground transition hover:bg-secondary/70"
+                aria-label="Close camera"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="relative bg-black">
+              {cameraError ? (
+                <div className="flex min-h-[280px] items-center justify-center p-6 text-center text-sm text-destructive">
+                  {cameraError}
+                </div>
+              ) : (
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  autoPlay
+                  className="block max-h-[70vh] w-full object-contain"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center justify-center gap-3 px-5 py-4">
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="rounded-full border border-border bg-card px-5 py-3 text-sm font-medium transition hover:bg-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={capturePhoto}
+                disabled={!!cameraError}
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Camera className="h-4 w-4" />
+                Capture
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
