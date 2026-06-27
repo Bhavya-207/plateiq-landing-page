@@ -1,5 +1,7 @@
 🍽️ PlateIQ
 
+🌐 Live Demo: https://plateiq-2vaxngthm-bhavyagrover2007-4911s-projects.vercel.app/
+
 Know Your Plate. Eat Smarter.
 
 PlateIQ is an AI-powered web application that helps users understand the nutritional value of their meals by simply uploading a food image. The platform analyzes the meal, identifies food items, estimates nutritional information, and provides personalized health recommendations in a simple and user-friendly interface.
